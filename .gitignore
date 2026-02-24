@@ -1,0 +1,4 @@
+*.mp4
+/record-pour-water
+.venv
+
