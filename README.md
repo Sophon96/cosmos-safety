@@ -8,10 +8,8 @@ Our goal is to create robotic systems that can pour liquids in a secure way.
 
 ## Implementation
 
-- We use the LeRobot So101 with an 80M parameter ACT model to be the brain of the robot. 
-- We integrate Cosmos Predict with action conditioning to demonstrate how we can generate many more samples in different action trajectories/environments. 
-- We integrate Cosmos Reason to evaluate generations of Cosmos Predict as well as during runtime, where the model reasons about trajectories on short time frames and determines whether the pouring trajectory will be successful. We integrate Cosmos Reason such that an unviable trajectory will be paused before the pouring commences.
-- We may be able to integrate Cosmos Transfer to change the color of cups and improve generalization. 
+- We use the LeRobot So101 with an 80M parameter ACT model to be the brain of the robot.  
+- We integrate Cosmos Reason to reason about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
 
 ## Evals
 
