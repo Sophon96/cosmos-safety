@@ -1,0 +1,3 @@
+The video contains a robot that is trying to pour a liquid from one cup into another. 
+The question is: Is the cup the gripper is holding at the proper position on top of the other cup when it starts pouring?
+Answer the question using the following format:\n\n<think>\nYour reasoning.\n</think>\n\nWrite your final answer immediately after the </think> tag.
