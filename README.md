@@ -22,6 +22,24 @@ When running the robot client with async inference, enable the Cosmos safety mon
 
 Ensure you run from the cosmos project root and have the modified lerobot installed (`pip install -e ./lerobot`).
 
+### Remote Cosmos VLM (cloud inference)
+
+To run Cosmos on a cloud server while LeRobot runs locally:
+
+**On cloud:**
+```bash
+cd cosmos && python -m uvicorn reason_server:app --host 0.0.0.0 --port 8000
+```
+
+**On local** (with SSH tunnel):
+```bash
+ssh -L 8000:localhost:8000 user@cloud-ip   # separate terminal
+export COSMOS_REMOTE_URL=http://127.0.0.1:8000
+# then run robot client with --cosmos_safety.enabled=True
+```
+
+Without tunnel (cloud has public IP): `export COSMOS_REMOTE_URL=http://<cloud-ip>:8000`
+
 ## Evals
 
 We hope to demonstrate the differences in accuracy between the Cosmos-integrated model and base ACT on 20 instances of liquid pouring. 

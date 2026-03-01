@@ -1,5 +1,6 @@
 # Unsloth must be imported before transformers for optimizations
 # from unsloth import FastVisionModel
+import os
 import torch
 import transformers
 import time
@@ -60,6 +61,20 @@ def _frames_to_video_path(
     return Path(output_path)
 
 
+def _binary_check_remote(url: str, video_path: str | Path, fps: int) -> int:
+    """Call remote server for binary check. video_path must be a file path."""
+    import httpx
+
+    url = url.rstrip("/")
+    with open(video_path, "rb") as f:
+        files = {"video": (Path(video_path).name, f, "video/mp4")}
+        data = {"fps": fps}
+        with httpx.Client(timeout=30.0) as client:
+            r = client.post(f"{url}/binary_check", files=files, data=data)
+            r.raise_for_status()
+            return int(r.json()["result"])
+
+
 def cosmos_binary_check(
     video_path: str | Path | list[Any],
     model: Any | None = None,
@@ -69,7 +84,20 @@ def cosmos_binary_check(
     """
     Run rapid 1-token inference to detect if robot is about to pour.
     Returns 1 if about to pour, 0 otherwise.
+    When COSMOS_REMOTE_URL is set, calls remote server instead of local model.
     """
+    remote_url = os.environ.get("COSMOS_REMOTE_URL")
+    if remote_url:
+        created_temp = False
+        if isinstance(video_path, (list, tuple)):
+            video_path = _frames_to_video_path(video_path, fps=fps)
+            created_temp = True
+        try:
+            return _binary_check_remote(remote_url, video_path, fps)
+        finally:
+            if created_temp and isinstance(video_path, Path) and video_path.exists():
+                video_path.unlink(missing_ok=True)
+
     if model is None or processor is None:
         model, processor = load_cosmos_model()
 
@@ -116,6 +144,28 @@ def cosmos_binary_check(
     return 0
 
 
+def _full_reason_remote(
+    url: str,
+    video_path: str | Path,
+    prompt_path: str | Path,
+    fps: int,
+    max_new_tokens: int,
+) -> str:
+    """Call remote server for full reason. video_path must be a file path."""
+    import httpx
+
+    url = url.rstrip("/")
+    with open(prompt_path, "r") as f:
+        prompt = f.read()
+    with open(video_path, "rb") as f:
+        files = {"video": (Path(video_path).name, f, "video/mp4")}
+        data = {"fps": fps, "prompt": prompt, "max_new_tokens": max_new_tokens}
+        with httpx.Client(timeout=120.0) as client:
+            r = client.post(f"{url}/full_reason", files=files, data=data)
+            r.raise_for_status()
+            return r.json().get("output", "")
+
+
 def cosmos_full_reason(
     video_path: str | Path | list[Any],
     prompt_path: str | Path = "prompt.txt",
@@ -127,7 +177,22 @@ def cosmos_full_reason(
     """
     Run full reasoning on video to determine if pouring trajectory is on track.
     Returns the model's reasoning output.
+    When COSMOS_REMOTE_URL is set, calls remote server instead of local model.
     """
+    remote_url = os.environ.get("COSMOS_REMOTE_URL")
+    if remote_url:
+        created_temp = False
+        if isinstance(video_path, (list, tuple)):
+            video_path = _frames_to_video_path(video_path, fps=fps)
+            created_temp = True
+        try:
+            return _full_reason_remote(
+                remote_url, video_path, Path(prompt_path), fps, max_new_tokens
+            )
+        finally:
+            if created_temp and isinstance(video_path, Path) and video_path.exists():
+                video_path.unlink(missing_ok=True)
+
     if model is None or processor is None:
         model, processor = load_cosmos_model()
 
