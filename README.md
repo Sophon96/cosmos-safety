@@ -11,6 +11,17 @@ Our goal is to create robotic systems that can pour liquids in a secure way.
 - We use the LeRobot So101 with an 80M parameter ACT model to be the brain of the robot.  
 - We integrate Cosmos Reason to reason about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
 
+### Cosmos Safety Monitor
+
+When running the robot client with async inference, enable the Cosmos safety monitor with `--cosmos_safety.enabled=True`. This will:
+
+1. **Binary check** (1 token, ~1 sec interval): Detect if the robot is about to pour water
+2. **Pause**: When detected, the robot holds its current position
+3. **Full reasoning**: Cosmos Reason analyzes the trajectory to determine if it is on track
+4. **Resume/Abort**: If the trajectory is viable, the robot resumes; otherwise it remains paused
+
+Ensure you run from the cosmos project root and have the modified lerobot installed (`pip install -e ./lerobot`).
+
 ## Evals
 
 We hope to demonstrate the differences in accuracy between the Cosmos-integrated model and base ACT on 20 instances of liquid pouring. 
