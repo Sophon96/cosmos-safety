@@ -1,5 +1,6 @@
 # Unsloth must be imported before transformers for optimizations
 # from unsloth import FastVisionModel
+import logging
 import os
 import torch
 import transformers
@@ -7,9 +8,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 MODEL_NAME = "nvidia/Cosmos-Reason2-2B"
 BINARY_PROMPT = (
-    "Watch the video. Is the robot about to pour water from one cup into another? "
+    "You are provided a video snippet. In the video there is a robot holding a red and white milk carton. It is trying to pour liquid into a brown cup"
+    "Is the robot about to pour water from one cup into another, or in the process of pouring water?"
     "Reply with ONLY a single character: 1 if yes (about to pour), 0 if no."
 )
 
@@ -106,7 +110,7 @@ def cosmos_binary_check(
 
     video_path = str(video_path)
     video_messages = [
-        {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant."}]},
+        {"role": "system", "content": [{"type": "text", "text": "You are a lab assistant monitoring a robotic arm pouring liquids."}]},
         {
             "role": "user",
             "content": [
@@ -204,7 +208,7 @@ def cosmos_full_reason(
         prompt = f.read()
 
     video_messages = [
-        {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant."}]},
+        {"role": "system", "content": [{"type": "text", "text": "You are a lab assistant monitoring a robotic arm pouring liquids."}]},
         {
             "role": "user",
             "content": [
@@ -235,7 +239,9 @@ def cosmos_full_reason(
         clean_up_tokenization_spaces=False,
     )
 
-    return output_text[0] or ""
+    output = output_text[0] or ""
+    logger.info("Cosmos full reason output: %s", output)
+    return output
 
 
 # Standalone script behavior (original reason.py)

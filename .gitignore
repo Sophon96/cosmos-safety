@@ -2,4 +2,5 @@
 /record-pour-water
 .venv
 videos/
+saved_videos/
 __pycache__/

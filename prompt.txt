@@ -1,6 +1,5 @@
 The video shows a robot trying to pour liquid from one cup into another. Based on the robot's current movement and position, will the cup the gripper is holding be in the proper position on top of the other cup when it starts pouring?
 
-<think>
-Your reasoning here.
-</think>
-Write your final answer immediately after the </think> tag. Respond with only the number: 1 if yes (on track), 0 if no (not on track).
+Think step by step about the robot's trajectory, gripper position, and alignment with the target cup before giving your answer.
+
+Answer the question using the following format:\n\n<think>\nYour reasoning.\n</think>\n\nWrite your final answer 1 if yes (on track), 0 if no (not on track) immediately after the </think> tag.
