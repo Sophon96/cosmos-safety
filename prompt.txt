@@ -3,5 +3,4 @@ The video shows a robot trying to pour liquid from one cup into another. Based o
 <think>
 Your reasoning here.
 </think>
-
-Your final answer: 1 if yes (on track), 0 if no (not on track). Reply with only the number.
+Write your final answer immediately after the </think> tag. Respond with only the number: 1 if yes (on track), 0 if no (not on track).
