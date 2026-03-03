@@ -1,11 +1,14 @@
 # Unsloth must be imported before transformers for optimizations
 # from unsloth import FastVisionModel
+import logging
 import os
 import torch
 import transformers
 import time
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 MODEL_NAME = "nvidia/Cosmos-Reason2-2B"
 BINARY_PROMPT = (
@@ -72,7 +75,9 @@ def _binary_check_remote(url: str, video_path: str | Path, fps: int) -> int:
         with httpx.Client(timeout=30.0) as client:
             r = client.post(f"{url}/binary_check", files=files, data=data)
             r.raise_for_status()
-            return int(r.json()["result"])
+            response = r.json()
+            logger.info(f"Binary check remote raw response: {response}")
+            return int(response["result"])
 
 
 def cosmos_binary_check(
@@ -138,6 +143,7 @@ def cosmos_binary_check(
     )
 
     text = (output_text[0] or "").strip().lower()
+    logger.info(f"Binary check raw response: {text}")
     # Parse 1/0 or yes/no (1 = about to pour)
     if "1" in text or text.startswith("yes"):
         return 1
@@ -163,7 +169,9 @@ def _full_reason_remote(
         with httpx.Client(timeout=120.0) as client:
             r = client.post(f"{url}/full_reason", files=files, data=data)
             r.raise_for_status()
-            return r.json().get("output", "")
+            response = r.json()
+            logger.info(f"Full reason remote raw response: {response}")
+            return response.get("output", "")
 
 
 def cosmos_full_reason(
@@ -172,7 +180,7 @@ def cosmos_full_reason(
     model: Any | None = None,
     processor: Any | None = None,
     fps: int = 4,
-    max_new_tokens: int = 512,
+    max_new_tokens: int = 4096,
 ) -> str:
     """
     Run full reasoning on video to determine if pouring trajectory is on track.
@@ -235,7 +243,9 @@ def cosmos_full_reason(
         clean_up_tokenization_spaces=False,
     )
 
-    return output_text[0] or ""
+    result = output_text[0] or ""
+    logger.info(f"Full reason local raw response: {result}")
+    return result
 
 
 # Standalone script behavior (original reason.py)

@@ -6,14 +6,21 @@ Run on cloud: uvicorn reason_server:app --host 0.0.0.0 --port 8000
 Local client sets COSMOS_REMOTE_URL=http://<cloud>:8000 to use this server.
 """
 
+import os
 import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
 
-from reason import cosmos_binary_check, cosmos_full_reason
+# Unset COSMOS_REMOTE_URL so the server always uses local inference
+os.environ.pop("COSMOS_REMOTE_URL", None)
+
+from reason import cosmos_binary_check, cosmos_full_reason, load_cosmos_model
 
 app = FastAPI(title="Cosmos Reason VLM", version="0.1.0")
+
+# Pre-load model at startup
+_model, _processor = load_cosmos_model()
 
 
 @app.post("/binary_check")
@@ -30,7 +37,7 @@ async def binary_check(
         f.write(content)
         path = Path(f.name)
     try:
-        result = cosmos_binary_check(path, fps=fps)
+        result = cosmos_binary_check(path, model=_model, processor=_processor, fps=fps)
         return {"result": result}
     finally:
         path.unlink(missing_ok=True)
@@ -61,6 +68,8 @@ async def full_reason(
                 output = cosmos_full_reason(
                     path,
                     prompt_path=prompt_path,
+                    model=_model,
+                    processor=_processor,
                     fps=fps,
                     max_new_tokens=max_new_tokens,
                 )
@@ -70,6 +79,8 @@ async def full_reason(
             output = cosmos_full_reason(
                 path,
                 prompt_path="prompt.txt",
+                model=_model,
+                processor=_processor,
                 fps=fps,
                 max_new_tokens=max_new_tokens,
             )

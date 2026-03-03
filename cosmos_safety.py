@@ -6,6 +6,7 @@ pauses the robot when detected, then runs full reasoning to validate trajectory.
 """
 
 import logging
+import os
 import threading
 import time
 from collections import deque
@@ -80,7 +81,7 @@ class FrameBuffer:
             for key in camera_keys:
                 frame = raw_observation[key]
                 if key not in self._buffers:
-                    self._buffers[key] = deque(maxlen=self.max_frames // self.sample_rate)
+                    self._buffers[key] = deque(maxlen=self.max_frames)
                 self._buffers[key].append(frame.copy())
 
     def get_clip(self, camera_key: str | None = None) -> list[Any]:
@@ -94,6 +95,47 @@ class FrameBuffer:
                 return []
             key = camera_key if camera_key and camera_key in self._buffers else keys[0]
             return list(self._buffers[key])
+
+    def get_combined_clip(self) -> list[Any]:
+        """
+        Get a clip combining all camera feeds side-by-side.
+        Frames from each camera are horizontally concatenated.
+        Returns list of numpy arrays (H, W_total, 3).
+        """
+        import numpy as np
+
+        with self._lock:
+            keys = sorted(self._buffers.keys())
+            if not keys:
+                return []
+            # Use the shortest buffer length so all cameras are aligned
+            min_len = min(len(self._buffers[k]) for k in keys)
+            if min_len == 0:
+                return []
+            combined = []
+            for i in range(min_len):
+                frames_to_concat = []
+                target_h = None
+                for k in keys:
+                    frame = self._buffers[k][i]
+                    if target_h is None:
+                        target_h = frame.shape[0]
+                    # Resize to match height if needed
+                    if frame.shape[0] != target_h:
+                        from PIL import Image
+                        img = Image.fromarray(frame)
+                        new_w = int(frame.shape[1] * target_h / frame.shape[0])
+                        img = img.resize((new_w, target_h))
+                        frame = np.array(img)
+                    frames_to_concat.append(frame)
+                combined.append(np.concatenate(frames_to_concat, axis=1))
+            return combined
+
+    def clear(self) -> None:
+        """Clear all buffered frames."""
+        with self._lock:
+            self._buffers.clear()
+            self._frame_count = 0
 
     def has_enough_frames(self, min_frames: int = 8) -> bool:
         """Check if we have enough frames for a clip."""
@@ -110,6 +152,9 @@ class CosmosBinaryChecker:
     def __init__(self, model: Any = None, processor: Any = None):
         self.model = model
         self.processor = processor
+        # Skip local model loading when using remote server
+        if os.environ.get("COSMOS_REMOTE_URL"):
+            return
         if model is None or processor is None:
             if load_cosmos_model is None:
                 raise RuntimeError("Cosmos reason module not available")
@@ -139,6 +184,9 @@ class CosmosFullReasoner:
         self.model = model
         self.processor = processor
         self.prompt_path = Path(prompt_path)
+        # Skip local model loading when using remote server
+        if os.environ.get("COSMOS_REMOTE_URL"):
+            return
         if model is None or processor is None:
             if load_cosmos_model is None:
                 raise RuntimeError("Cosmos reason module not available")
@@ -230,6 +278,7 @@ class CosmosSafetyMonitor:
 
     def _run_binary_check_loop(self) -> None:
         """Background thread: run binary check periodically."""
+        logger.info("Binary check loop started")
         last_check = 0.0
         while not self._shutdown.is_set():
             time.sleep(0.5)  # Wake every 0.5 sec
@@ -240,14 +289,19 @@ class CosmosSafetyMonitor:
                 continue
             last_check = now
             if not self.frame_buffer.has_enough_frames(self.min_frames_for_check):
+                with self.frame_buffer._lock:
+                    buf_sizes = {k: len(v) for k, v in self.frame_buffer._buffers.items()}
+                logger.info(f"Not enough frames yet. Buffers: {buf_sizes}, need {self.min_frames_for_check}")
                 continue
             if self._reasoning:
                 continue
             try:
-                frames = self.frame_buffer.get_clip(self.camera_key)
+                frames = self.frame_buffer.get_combined_clip()
                 if len(frames) < self.min_frames_for_check:
                     continue
+                logger.info(f"Running binary check with {len(frames)} frames")
                 result = self.binary_checker.check(frames, fps=4)
+                logger.info(f"Binary check result: {result}")
                 if result == 1:
                     logger.info("Cosmos binary check: about to pour detected - pausing robot")
                     self._set_paused(True)
@@ -261,7 +315,11 @@ class CosmosSafetyMonitor:
                 logger.warning(f"Cosmos binary check failed: {e}")
 
     def start(self) -> None:
-        """Start the background binary check thread."""
+        """Start the background binary check thread. Safe to call multiple times."""
+        # Reset state from previous episode
+        self._set_paused(False)
+        self._reasoning = False
+        self.frame_buffer.clear()
         self._shutdown.clear()
         self._binary_thread = threading.Thread(target=self._run_binary_check_loop, daemon=True)
         self._binary_thread.start()
@@ -292,13 +350,15 @@ class CosmosSafetyMonitor:
         """
         self._reasoning = True
         try:
-            frames = self.frame_buffer.get_clip(self.camera_key)
+            frames = self.frame_buffer.get_combined_clip()
             if not frames:
                 logger.warning("No frames for full reason - resuming")
                 return True
+            logger.info(f"Running full reason with {len(frames)} frames")
             output = self.full_reasoner.reason(frames, fps=4)
-            logger.info(f"Cosmos full reason output: {output[:200]}...")
+            logger.info(f"Cosmos full reason output: {output}")
             resume = _parse_reason_output(output)
+            logger.info(f"Full reason decision: {'resume' if resume else 'abort'}")
             return resume
         finally:
             self._reasoning = False
