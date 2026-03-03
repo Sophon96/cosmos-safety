@@ -29,14 +29,18 @@ def clip_video(
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     clip_duration = end_sec - start_sec
 
-    # Output filename
+    # Output filename (avoid overwriting: add _1, _2, etc. if file exists)
     if fps is not None or duration is not None:
         out_dur = duration if duration is not None else clip_duration
         out_fps = fps if fps is not None else 4
-        output_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}_{out_fps}fps_{out_dur}s.mp4"
+        base_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}_{out_fps}fps_{out_dur}s"
     else:
-        output_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}.mp4"
-    output_path = output_dir / output_name
+        base_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}"
+    output_path = output_dir / f"{base_name}.mp4"
+    counter = 1
+    while output_path.exists():
+        output_path = output_dir / f"{base_name}_{counter}.mp4"
+        counter += 1
 
     if fps is not None or duration is not None:
         # Re-encode to set fps and/or duration

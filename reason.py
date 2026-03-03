@@ -1,7 +1,12 @@
 # Unsloth must be imported before transformers for optimizations
 # from unsloth import FastVisionModel
-import logging
 import os
+
+# Use /workspace for HF cache on cloud GPUs where root disk is small
+if not os.environ.get("HF_HOME") and os.path.exists("/workspace"):
+    os.environ["HF_HOME"] = "/workspace/.cache/huggingface"
+
+import logging
 import torch
 import transformers
 import time
@@ -10,7 +15,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "nvidia/Cosmos-Reason2-2B"
+MODEL_NAME = "embedl/Cosmos-Reason2-2B-W4A16"
 BINARY_PROMPT = (
     "You are provided a video snippet. In the video there is a robot holding a red and white milk carton. It is trying to pour liquid into a brown cup"
     "Is the robot about to pour water from one cup into another, or in the process of pouring water?"
@@ -257,15 +262,15 @@ if __name__ == "__main__":
             "content": [
                 {
                     "type": "video",
-                    "video": "videos/snapshots/91ed530147ea8f380b10181c4e568865fa0e0996/output_phone/episode_049.mp4",
+                    "video": "saved_videos/output_phone/episode_000.mp4",
                     "fps": 4,
                 },
                 {
                     "type": "video",
-                    "video": "videos/snapshots/91ed530147ea8f380b10181c4e568865fa0e0996/output/episode_049.mp4",
+                    "video": "saved_videos/output/episode_000.mp4",
                     "fps": 4,
                 },
-                {"type": "text", "text": "what is happening in these two videos?"},
+                {"type": "text", "text": prompt},
             ],
         },
     ]

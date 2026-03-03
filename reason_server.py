@@ -4,6 +4,26 @@ Cosmos Reason VLM server for remote inference.
 Run on cloud: uvicorn reason_server:app --host 0.0.0.0 --port 8000
 
 Local client sets COSMOS_REMOTE_URL=http://<cloud>:8000 to use this server.
+
+Test with curl (replace localhost:8000 and video.mp4 as needed):
+
+  # Health check
+  curl http://localhost:8000/health
+
+  # Binary check (is robot about to pour?)
+  curl -X POST http://localhost:8000/binary_check -F "video=@videos/temp/episode_000_clip_13.0-14.0_30fps_1.0s.mp4" -F "fps=4"
+
+  # Full reason (trajectory validation)
+  curl -X POST http://localhost:8000/full_reason -F "video=@videos/temp/episode_000_clip_13.0-14.0_30fps_1.0s.mp4" -F "fps=4" -F "max_new_tokens=4096"
+
+  # Full reason with custom prompt
+  curl -X POST http://localhost:8000/full_reason -F "video=@video.mp4" -F "fps=4" -F "prompt=Describe what happens in this video." -F "max_new_tokens=4096"
+
+  # List saved videos
+  curl http://localhost:8000/videos
+
+  # Download a saved video (use filename from /videos)
+  curl -O -J http://localhost:8000/videos/FILENAME.mp4
 """
 
 import logging
