@@ -15,7 +15,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "embedl/Cosmos-Reason2-2B-W4A16"
+MODEL_NAME ="nvidia/Cosmos-Reason2-8B"
 BINARY_PROMPT = (
     "You are provided a video snippet. In the video there is a robot holding a red and white milk carton. It is trying to pour liquid into a brown cup"
     "Is the robot about to pour water from one cup into another, or in the process of pouring water?"
@@ -181,7 +181,7 @@ def cosmos_full_reason(
     model: Any | None = None,
     processor: Any | None = None,
     fps: int = 4,
-    max_new_tokens: int = 512,
+    max_new_tokens: int = 4096,
 ) -> str:
     """
     Run full reasoning on video to determine if pouring trajectory is on track.

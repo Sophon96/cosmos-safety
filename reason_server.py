@@ -86,7 +86,7 @@ async def full_reason(
     video: UploadFile = File(...),
     fps: int = Form(default=4),
     prompt: str | None = Form(default=None),
-    max_new_tokens: int = Form(default=4096),
+    max_new_tokens: int = Form(default=10240),
 ) -> dict:
     """
     Run full reasoning on video for trajectory validation.
