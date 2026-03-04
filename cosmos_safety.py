@@ -71,9 +71,33 @@ class FrameBuffer:
                 keys.append(k)
         return keys
 
-    def push(self, raw_observation: dict[str, Any]) -> None:
-        """Push frames from raw_observation into the buffer."""
-        camera_keys = self._get_camera_keys(raw_observation)
+    def push(self, raw_observation: dict[str, Any], camera_key: str | None = None) -> None:
+        """Push frames from raw_observation into the buffer.
+
+        Args:
+            raw_observation: Dict of sensor readings.
+            camera_key: If provided, only buffer this single camera key.
+        """
+        all_camera_keys = self._get_camera_keys(raw_observation)
+        if camera_key is not None:
+            if camera_key not in raw_observation:
+                # Log once when the requested key isn't found
+                if not getattr(self, '_logged_missing_key', False):
+                    logger.warning(
+                        f"Requested camera_key={camera_key!r} not found in observation. "
+                        f"Available camera keys: {all_camera_keys}. "
+                        f"All observation keys: {list(raw_observation.keys())}"
+                    )
+                    self._logged_missing_key = True
+                camera_keys = []
+            else:
+                camera_keys = [camera_key]
+        else:
+            camera_keys = all_camera_keys
+        # Log the first time we successfully buffer
+        if camera_keys and not getattr(self, '_logged_camera_keys', False):
+            logger.info(f"FrameBuffer: buffering camera key(s): {camera_keys} (all detected: {all_camera_keys})")
+            self._logged_camera_keys = True
         with self._lock:
             self._frame_count += 1
             if self._frame_count % self.sample_rate != 0:
@@ -274,7 +298,7 @@ class CosmosSafetyMonitor:
 
     def push_observation(self, raw_observation: dict[str, Any]) -> None:
         """Call from control_loop_observation to buffer frames."""
-        self.frame_buffer.push(raw_observation)
+        self.frame_buffer.push(raw_observation, camera_key=self.camera_key)
 
     def _run_binary_check_loop(self) -> None:
         """Background thread: run binary check periodically."""
@@ -296,7 +320,7 @@ class CosmosSafetyMonitor:
             if self._reasoning:
                 continue
             try:
-                frames = self.frame_buffer.get_combined_clip()
+                frames = self.frame_buffer.get_clip(self.camera_key)
                 if len(frames) < self.min_frames_for_check:
                     continue
                 logger.info(f"Running binary check with {len(frames)} frames")
@@ -350,7 +374,7 @@ class CosmosSafetyMonitor:
         """
         self._reasoning = True
         try:
-            frames = self.frame_buffer.get_combined_clip()
+            frames = self.frame_buffer.get_clip(self.camera_key)
             if not frames:
                 logger.warning("No frames for full reason - resuming")
                 return True
