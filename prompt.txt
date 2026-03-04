@@ -1,11 +1,16 @@
-The video shows a robot trying to pour liquid from one cup into another. Based on the robot's current movement and position, will the cup the gripper is holding be in the proper position on top of the other cup when it starts pouring?
+You are ensuring the safety and accuracy of the operations of a robotic arm. Based on heuristics, the robotic arm has been predicted to be in the process of pouring liquid, so it is not longer adjusting its position. Your task is to judge whether the arm will be able to successfully pour the liquid into the cup without spilling.
 
-Answer the question in the following format:
+The video shows a top-down view of the arm in the environment. The arm's goal is to pour the red-and-white paper carton into the brown coffee cup.
+
+Based on the robot's current movement and position, is the carton held by the gripper in the proper position on top of the other cup?
+
+
+Think step by step about the robot's gripper position and alignment with the target cup before giving your answer. If you are uncertain in any capacity, output 0. 
+
+Answer the question using the following format:
 
 <think>
-your reasoning
+Your reasoning.
 </think>
 
-<answer>
-1 if yes (on track), 0 if no (not on track). Reply with only the number.
-</answer>
+Write your final answer 1 if yes (on track), 0 if no (not on track) immediately after the </think> tag.

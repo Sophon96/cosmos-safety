@@ -13,30 +13,62 @@ def clip_video(
     start_sec: float,
     end_sec: float,
     output_dir: str | Path = "videos/temp",
+    fps: int | None = None,
+    duration: float | None = None,
 ) -> Path:
-    """Clip video from start_sec to end_sec and save to output_dir."""
+    """Clip video from start_sec to end_sec and save to output_dir.
+
+    If fps or duration is specified, re-encodes to produce exactly that many
+    frames (e.g., fps=4, duration=1 -> 4 frames total). Otherwise uses
+    stream copy for fast clipping without re-encoding.
+    """
     video_path = Path(video_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Output filename: original_name_clip_1-10.mp4
-    output_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}.mp4"
-    output_path = output_dir / output_name
-
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-    duration = end_sec - start_sec
+    clip_duration = end_sec - start_sec
 
-    # -ss before -i = fast seek (input seeking)
-    # -t = duration to copy
-    cmd = [
-        ffmpeg_path,
-        "-y",  # overwrite output
-        "-ss", str(start_sec),
-        "-i", str(video_path),
-        "-t", str(duration),
-        "-c", "copy",  # stream copy, no re-encoding
-        str(output_path),
-    ]
+    # Output filename (avoid overwriting: add _1, _2, etc. if file exists)
+    if fps is not None or duration is not None:
+        out_dur = duration if duration is not None else clip_duration
+        out_fps = fps if fps is not None else 4
+        base_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}_{out_fps}fps_{out_dur}s"
+    else:
+        base_name = f"{video_path.stem}_clip_{start_sec}-{end_sec}"
+    output_path = output_dir / f"{base_name}.mp4"
+    counter = 1
+    while output_path.exists():
+        output_path = output_dir / f"{base_name}_{counter}.mp4"
+        counter += 1
+
+    if fps is not None or duration is not None:
+        # Re-encode to set fps and/or duration
+        out_duration = duration if duration is not None else clip_duration
+        out_fps = fps if fps is not None else 4
+        cmd = [
+            ffmpeg_path,
+            "-y",
+            "-ss", str(start_sec),
+            "-i", str(video_path),
+            "-t", str(out_duration),
+            "-vf", f"fps={out_fps}",
+            "-c:v", "libx264",
+            "-crf", "23",
+            "-an",
+            str(output_path),
+        ]
+    else:
+        # Stream copy, no re-encoding
+        cmd = [
+            ffmpeg_path,
+            "-y",
+            "-ss", str(start_sec),
+            "-i", str(video_path),
+            "-t", str(clip_duration),
+            "-c", "copy",
+            str(output_path),
+        ]
 
     subprocess.run(cmd, check=True)
     return output_path
@@ -65,6 +97,18 @@ def main():
         default="videos/temp",
         help="Output directory (default: videos/temp)",
     )
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=None,
+        help="Output frame rate (re-encodes; e.g., 4 for 4 fps)",
+    )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=None,
+        help="Output duration in seconds (re-encodes; e.g., 1 for 1 second)",
+    )
 
     args = parser.parse_args()
 
@@ -76,6 +120,8 @@ def main():
         args.start,
         args.end,
         args.output_dir,
+        fps=args.fps,
+        duration=args.duration,
     )
     print(f"Saved clipped video to: {output_path}")
 

@@ -216,7 +216,7 @@ class CosmosFullReasoner:
                 raise RuntimeError("Cosmos reason module not available")
             self.model, self.processor = load_cosmos_model()
 
-    def reason(self, frames: list[Any], fps: int = 4, max_new_tokens: int = 512) -> str:
+    def reason(self, frames: list[Any], fps: int = 4, max_new_tokens: int = 4096) -> str:
         """Run full reasoning on the clip. Returns model output string."""
         if not frames:
             return ""

@@ -8,17 +8,23 @@ Our goal is to create robotic systems that can pour liquids in a secure way.
 
 ## Implementation
 
-- We use the LeRobot So101 with an 80M parameter ACT model to be the brain of the robot.  
+- We use the LeRobot So101 with an 80M parameter ACT model running locally to be the brain of the robot.  
 - We integrate Cosmos Reason to reason about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
+- Specifically, every 32 frames will be sent to Cosmos Reason to trigger a ~.1 second output whether the robot is pouring; if it is, the robot will pause and send a prompt to trigger a ~10 second reasoning response as for whether the robotic arm is on track for pouring. 
 
 ### Cosmos Safety Monitor
 
-When running the robot client with async inference, enable the Cosmos safety monitor with `--cosmos_safety.enabled=True`. This will:
+When running `lerobot-record` with a policy, enable the Cosmos safety monitor with `--cosmos_safety.enabled=True`. This will:
 
 1. **Binary check** (1 token, ~1 sec interval): Detect if the robot is about to pour water
 2. **Pause**: When detected, the robot holds its current position
 3. **Full reasoning**: Cosmos Reason analyzes the trajectory to determine if it is on track
 4. **Resume/Abort**: If the trajectory is viable, the robot resumes; otherwise it remains paused
+
+Example:
+```bash
+lerobot-record --robot.type=so100_follower ... --policy.path=your/policy --cosmos_safety.enabled=True
+```
 
 Ensure you run from the cosmos project root and have the modified lerobot installed (`pip install -e ./lerobot`).
 
@@ -35,7 +41,7 @@ cd cosmos && python -m uvicorn reason_server:app --host 0.0.0.0 --port 8000
 ```bash
 ssh -L 8000:localhost:8000 user@cloud-ip   # separate terminal
 export COSMOS_REMOTE_URL=http://127.0.0.1:8000
-# then run robot client with --cosmos_safety.enabled=True
+# then run lerobot-record with --cosmos_safety.enabled=True
 ```
 
 Without tunnel (cloud has public IP): `export COSMOS_REMOTE_URL=http://<cloud-ip>:8000`
