@@ -78,7 +78,17 @@ sequenceDiagram
 
 ## Installation
 
-> First, clone this repo and initialize the lerobot submodule. After installing dependencies, proceed to run Cosmos Safety.
+First, clone this repo and initialize the lerobot submodule. Then, create a virtual environment and install the lerobot submodule:
+
+```bash
+# Using pip
+pip install -e "./lerobot[feetech]"
+
+# Using uv
+uv pip install -e "./lerobot[feetech]"
+```
+
+After installing dependencies, proceed to run Cosmos Safety.
 
 ## Usage
 
