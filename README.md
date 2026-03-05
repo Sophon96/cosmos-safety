@@ -10,6 +10,7 @@ Our goal is to create robust robotic systems that can automate liquid pouring in
 - We train a 80M parameter ACT model running locally with LeRobot So101 arms to be the brain of the robot.  
 - We integrate Cosmos Reason to reason real time about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
 - Specifically, every 32 frames will be sent to Cosmos Reason to trigger a ~.1 second output whether the robot is pouring; if it is, the robot will pause and send a prompt to trigger a ~10 second reasoning response as for whether the robotic arm is on track for pouring. 
+- Pausing is enabled via the CosmosSafetyMonitor class in `cosmos_safety.py`, which is hooked into the robot client in the lerobot module within `lerobot_record.py`. 
 
 ## Usage
 
