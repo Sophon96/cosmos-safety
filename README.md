@@ -1,16 +1,20 @@
-# NVIDIA Cosmos Cookoff Hackathon Submission
-
+# Cosmos Safety
 ## Motivation
 
-Our goal is to create robotic systems that can pour liquids in a secure way. 
+Our goal is to create robust robotic systems that can automate liquid pouring in wet labs. 
 - Robotic labs and lab-in-the-loop AI will be the future of biology, and integrating models that reason about potential failures before they happen will ensure productivity gains don't sacrifice safety. 
-- We recognize that specialized fine tuning scenarios can be limited in resources, and we aim to demonstrate how Nvidia's Cosmos models can be used to fill this gap. 
+- We built Cosmos Safety as the real time safety layer for future robotic wet labs.
 
 ## Implementation
 
-- We use the LeRobot So101 with an 80M parameter ACT model running locally to be the brain of the robot.  
-- We integrate Cosmos Reason to reason about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
+- We train a 80M parameter ACT model running locally with LeRobot So101 arms to be the brain of the robot.  
+- We integrate Cosmos Reason to reason real time about trajectories on short time frames and determines whether the pouring trajectory will be successful. An unviable trajectory will be paused before the pouring commences.
 - Specifically, every 32 frames will be sent to Cosmos Reason to trigger a ~.1 second output whether the robot is pouring; if it is, the robot will pause and send a prompt to trigger a ~10 second reasoning response as for whether the robotic arm is on track for pouring. 
+- Pausing is enabled via the CosmosSafetyMonitor class in `cosmos_safety.py`, which is hooked into the robot client in the lerobot module within `lerobot_record.py`. 
+
+## Usage
+
+> First, clone this repo and initialize the lerobot submodule. After installing dependencies, proceed to run Cosmos Safety.
 
 ### Cosmos Safety Monitor
 
@@ -48,9 +52,24 @@ Without tunnel (cloud has public IP): `export COSMOS_REMOTE_URL=http://<cloud-ip
 
 ## Evals
 
-We hope to demonstrate the differences in accuracy between the Cosmos-integrated model and base ACT on 20 instances of liquid pouring. 
-- One labeled cup will contain liquid to be poured into the second cup.
-- The two cups will be positioned at random per iteration.
-- The two policies will be evaluated on accuracy of pouring (Pass/Fail)
+We evaluate the success of our integration of Cosmos Reason with the pretrained ACT by measuring the accuracy and precision of the system when presented with 20 safe/unsafe pouring positions. 
+- **Sensitivity** (continue when safe): 7/10
+- **Specificity** (stop when unsafe): 8/10
+
+## Future Steps
+- Reset robot to a safe position after Cosmos Safety triggers rather than just continuing to pause. 
+- Add human in the loop support for intervention on pause.
+- Develop online RL training integration leveraging Cosmos Safety.
+
+
+## Models and Datasets Used
+
+[Training Dataset](https://huggingface.co/datasets/Sophon96/eval_pour-milk)
+
+[Trained ACT](https://huggingface.co/Sophon96/pour-milk-policy)
+
+[Nvidia Cosmos Reason 2](https://huggingface.co/nvidia/Cosmos-Reason2-8B)
+
+
 
 
