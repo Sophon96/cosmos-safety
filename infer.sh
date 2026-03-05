@@ -14,4 +14,5 @@ COSMOS_REMOTE_URL=http://127.0.0.1:8000 lerobot-record \
     --dataset.streaming_encoding=false \
     --dataset.encoder_threads=2 \
     --policy.path=Sophon96/pour-milk-policy \
+    --policy.device="xpu" \
     --cosmos_safety.enabled=True

@@ -15,10 +15,6 @@ dependencies = [
     "pyarrow",
     "python-multipart>=0.0.22",
     "torch>=2.7.1",
-<<<<<<< HEAD
-    "transformers>=4.49.0",
-=======
     "transformers>=4.57.6",
->>>>>>> cyan/main
     "uvicorn>=0.32",
 ]

@@ -170,6 +170,62 @@ class FrameBuffer:
             return False
 
 
+def _frames_to_temp_video(frames: list[Any], fps: int) -> Path:
+    """Write frames to a temp mp4 and return the path."""
+    import tempfile
+    import imageio
+    fd, path = tempfile.mkstemp(suffix=".mp4")
+    os.close(fd)
+    path = Path(path)
+    writer = imageio.get_writer(str(path), fps=fps, codec="libx264")
+    for frame in frames:
+        writer.append_data(frame)
+    writer.close()
+    return path
+
+
+def _binary_check_remote_from_frames(remote_url: str, frames: list[Any], fps: int) -> int:
+    """Do a remote binary check directly from frames (no reason module needed)."""
+    import httpx
+    video_path = _frames_to_temp_video(frames, fps)
+    try:
+        url = remote_url.rstrip("/")
+        with open(video_path, "rb") as f:
+            files = {"video": (video_path.name, f, "video/mp4")}
+            data = {"fps": fps}
+            with httpx.Client(timeout=30.0) as client:
+                r = client.post(f"{url}/binary_check", files=files, data=data)
+                r.raise_for_status()
+                response = r.json()
+                logger.info(f"Binary check remote raw response: {response}")
+                return int(response["result"])
+    finally:
+        video_path.unlink(missing_ok=True)
+
+
+def _full_reason_remote_from_frames(
+    remote_url: str, frames: list[Any], prompt_path: Path, fps: int, max_new_tokens: int
+) -> str:
+    """Do a remote full reason directly from frames (no reason module needed)."""
+    import httpx
+    video_path = _frames_to_temp_video(frames, fps)
+    try:
+        url = remote_url.rstrip("/")
+        with open(prompt_path, "r") as f:
+            prompt = f.read()
+        with open(video_path, "rb") as f:
+            files = {"video": (video_path.name, f, "video/mp4")}
+            data = {"fps": fps, "prompt": prompt, "max_new_tokens": max_new_tokens}
+            with httpx.Client(timeout=120.0) as client:
+                r = client.post(f"{url}/full_reason", files=files, data=data)
+                r.raise_for_status()
+                response = r.json()
+                logger.info(f"Full reason remote raw response: {response}")
+                return response.get("output", "")
+    finally:
+        video_path.unlink(missing_ok=True)
+
+
 class CosmosBinaryChecker:
     """Runs rapid 1-token Cosmos inference to detect 'about to pour'."""
 
@@ -188,6 +244,11 @@ class CosmosBinaryChecker:
         """Returns 1 if about to pour, 0 otherwise."""
         if not frames:
             return 0
+        if cosmos_binary_check is None:
+            remote_url = os.environ.get("COSMOS_REMOTE_URL")
+            if remote_url:
+                return _binary_check_remote_from_frames(remote_url, frames, fps)
+            raise RuntimeError("Cosmos reason module not available")
         return cosmos_binary_check(
             frames,
             model=self.model,
@@ -220,6 +281,13 @@ class CosmosFullReasoner:
         """Run full reasoning on the clip. Returns model output string."""
         if not frames:
             return ""
+        if cosmos_full_reason is None:
+            remote_url = os.environ.get("COSMOS_REMOTE_URL")
+            if remote_url:
+                return _full_reason_remote_from_frames(
+                    remote_url, frames, self.prompt_path, fps, max_new_tokens
+                )
+            raise RuntimeError("Cosmos reason module not available")
         return cosmos_full_reason(
             frames,
             prompt_path=self.prompt_path,
@@ -329,6 +397,7 @@ class CosmosSafetyMonitor:
                 if result == 1:
                     logger.info("Cosmos binary check: about to pour detected - pausing robot")
                     self._set_paused(True)
+                    self._reasoning = True
                     # Run full reason in background to decide resume/abort
                     reason_thread = threading.Thread(
                         target=self._run_full_reason_and_apply,
