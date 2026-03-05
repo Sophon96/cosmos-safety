@@ -1,10 +1,8 @@
-# NVIDIA Cosmos Cookoff Hackathon Submission
-
+# Cosmos Safety
 ## Motivation
 
 Our goal is to create robotic systems that can pour liquids in a secure way. 
 - Robotic labs and lab-in-the-loop AI will be the future of biology, and integrating models that reason about potential failures before they happen will ensure productivity gains don't sacrifice safety. 
-- We recognize that specialized fine tuning scenarios can be limited in resources, and we aim to demonstrate how Nvidia's Cosmos models can be used to fill this gap. 
 
 ## Implementation
 
@@ -48,9 +46,12 @@ Without tunnel (cloud has public IP): `export COSMOS_REMOTE_URL=http://<cloud-ip
 
 ## Evals
 
-We hope to demonstrate the differences in accuracy between the Cosmos-integrated model and base ACT on 20 instances of liquid pouring. 
-- One labeled cup will contain liquid to be poured into the second cup.
-- The two cups will be positioned at random per iteration.
-- The two policies will be evaluated on accuracy of pouring (Pass/Fail)
+We evaluate the success of our integration of Cosmos Reason with the pretrained ACT by measuring the accuracy and precision of the system when presented with 20 safe/unsafe pouring positions. 
+- Sensitivity (continue when safe): 7/10
+- Specificity (stop when unsafe): 8/10
+
+## Future Steps
+- Reset robot to a safe position after Cosmos Safety triggers rather than just continuing to pause. 
+- Develop online RL training methods leveraging robot's safe reset pause.
 
 
