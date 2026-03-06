@@ -78,6 +78,19 @@ sequenceDiagram
 
 ## Installation
 
+> [!WARNING]
+> Due to an outdated dependency version in lerobot, the Cosmos Safety server and client must use separate Python environments
+
+### Server installation
+
+First, clone this repo. Then, create a virtual environment and install the package dependencies with `uv`:
+
+```bash
+uv sync
+```
+
+### Client installation
+
 First, clone this repo and initialize the lerobot submodule. Then, create a virtual environment and install the lerobot submodule:
 
 ```bash

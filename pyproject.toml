@@ -1,7 +1,7 @@
 [project]
 name = "cosmos"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Safety Layer for Autonomous Wet Labs"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
